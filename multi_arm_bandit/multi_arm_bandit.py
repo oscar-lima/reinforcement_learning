@@ -8,6 +8,7 @@ problem: multi-arm bandit
 
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 class MultiArmBandit(object):
     '''
@@ -15,15 +16,22 @@ class MultiArmBandit(object):
     '''
     def __init__(self):
         # homework (fixed) parameters
-        number_of_bandits = 10 # the amount of bandit machines that we have
+        self.number_of_bandits = 10 # the amount of bandit machines that we have
         self.bandits_mean_reward = 0.0 # in average the bandits will give you no reward (might loose, might win)
         self.bandits_variance = 1.0 # bandit average reward is allowed to deviate this much w.r.t. self.bandits_mean_reward
         self.reward_variance = 1.0 # bandit reward is allowed to deviate this much w.r.t. the bandit mean (self.bandit_average_rewards[bandit_number])
+        self.large_optimistic_init_value = 100.0 # the optimistic initialization (big) value
+        self.number_of_times_to_play = 1000 # the number of times to play the bandits
 
         # compute n random rewards for all bandits (n=number_of_bandits)
-        self.bandit_average_rewards = self.compute_multiple_bandit_average_reward(number_of_bandits)
-        print 'Bandits will provide in average this rewards:'
+        self.bandit_average_rewards = self.compute_multiple_bandit_average_reward(self.number_of_bandits)
+        print 'Bandits will provide in average this rewards :'
         print self.bandit_average_rewards
+        
+        # initialize bandit values
+        self.q_na_estimate = self.optimistic_init(self.large_optimistic_init_value)
+        print 'Bandits initial values :'
+        print self.q_na_estimate
 
 
     def sample_gaussian(self, mean, variance):
@@ -55,8 +63,117 @@ class MultiArmBandit(object):
         return self.sample_gaussian(mean, self.reward_variance)
 
 
+    def optimistic_init(self, large_value):
+        '''
+        All equal and set to large values
+        '''
+        bandit_init_values = []
+        for i in range(0, self.number_of_bandits):
+            bandit_init_values.append(large_value)
+        return bandit_init_values
+
+
+    def update_q_a_estimate(self, new_sample, na, bandit_index):
+        '''
+        Q^(a) : expected value function
+        new_sample = r na + 1 = the new reward
+        na - number of times that particular bandit has been played
+        '''
+        old_estimate = self.q_na_estimate[bandit_index]
+        step_size = 1.0 / (na + 1.0)
+        error = (new_sample - old_estimate)
+        return old_estimate + step_size * error
+
+
+    def pick_best_action(self, array_of_values):
+        '''
+        pick a* among an array_of_values
+        input - an array of values, (e.g. a = [1, 2, 7, 7, 4, 5])
+        Examine which is the maximum average reward (e.g. 7)
+        and get the first associated bandit index (e.g. 2)
+        '''
+        max_value = max(array_of_values)
+        a_star = None
+        for i, value in enumerate(array_of_values):
+            if value == max_value:
+                a_star = i - 0
+                break
+        return a_star
+
+
+    def plot_bandit_rewards(self, y_list, color):
+        '''
+        method that plots the bandit rewards
+        '''
+        # generate x axis values
+        x_list = []
+        for i in range(0, len(y_list)):
+            x_list.append(i)
+        print 'xlist'
+        print x_list
+        
+        plt.plot(x_list, y_list, color)
+        plt.axis([-0.15, max(x_list) + 0.15, -10., max(y_list) + 10.])
+
+
     def start(self):
-        print 'reward : ' + str(self.compute_reward(4))
+        '''
+        solve homework 1 by combining all class functions
+        '''
+        
+        # greedy, exploitation over exploration
+        
+        # initialize the number of times played for each bandit to 0
+        number_of_times_played = []
+        for i in range(0, self.number_of_bandits):
+            number_of_times_played.append(0)
+        
+        # for plotting purposes
+        bandit_rewards = []
+        
+        # save initial estimates in bandit_rewards empty list
+        for bandit_index in range(0, self.number_of_bandits):
+            bandit_rewards.append([self.q_na_estimate[bandit_index]])
+
+        for epoc in range(1, self.number_of_times_to_play):
+            # get the index of the bandit with the maximum reward
+            best_bandit = self.pick_best_action(self.q_na_estimate)
+            
+            # play bandit and get a reward
+            reward = self.compute_reward(best_bandit)
+            
+            # update value
+            updated_value = self.update_q_a_estimate(reward, number_of_times_played[best_bandit], best_bandit)
+            
+            # increase the number of times played of the winner bandit by one
+            number_of_times_played[best_bandit] = number_of_times_played[best_bandit] + 1
+            
+            # update bandit estimate based on the obtained reward
+            print '%d. Played bandit %d , gained reward of %f, updating value from %f to %f'% (epoc, best_bandit, reward, self.q_na_estimate[best_bandit], updated_value)
+            self.q_na_estimate[best_bandit] = updated_value
+            
+            # save bandit updated_value in memory for plotting purposes
+            bandit_rewards[best_bandit].append(updated_value)
+
+
+        print 'Bandit rewards after %d iterations'% (self.number_of_times_to_play)
+        print self.q_na_estimate
+        
+        print 'True (hidden) bandit average rewards : '
+        print self.bandit_average_rewards
+        
+        print 'Best bandit as found by RL algorithm : %d' % (self.pick_best_action(self.q_na_estimate))
+        print 'True (hidden) best bandit : %d' % (self.pick_best_action(self.bandit_average_rewards))
+        
+        # plot bandit 0 average rewards
+        colors_array = ['b--', 'g--', 'r--', 'c--', 'm--', 'y--', 'k--', 'w--', 'b-', 'g-']
+        for i in range(0, self.number_of_bandits):
+            self.plot_bandit_rewards(bandit_rewards[i], colors_array[i])
+        
+        # setup labels and show plot
+        plt.xlabel('epocs')
+        plt.ylabel('reward')
+        plt.show()
 
 
 if __name__ == '__main__':
