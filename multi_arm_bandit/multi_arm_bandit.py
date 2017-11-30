@@ -9,6 +9,7 @@ problem: multi-arm bandit
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from numpy.random import choice
 
 class MultiArmBandit(object):
     '''
@@ -22,6 +23,8 @@ class MultiArmBandit(object):
         self.reward_variance = 1.0 # bandit reward is allowed to deviate this much w.r.t. the bandit mean (self.bandit_average_rewards[bandit_number])
         self.large_optimistic_init_value = 100.0 # the optimistic initialization (big) value
         self.number_of_times_to_play = 1000 # the number of times to play the bandits
+        self.e = 0.3 # the tradeoff between explotation and exploration e-greedy parameter. it will allow for this much percentage of exploration (e.g. 30%)
+        self.eta = 0.01 # botlzman policy param: control the tradeoff between uniform and greedy policy
 
         # compute n random rewards for all bandits (n=number_of_bandits)
         self.bandit_average_rewards = self.compute_multiple_bandit_average_reward(self.number_of_bandits)
@@ -32,6 +35,9 @@ class MultiArmBandit(object):
         self.q_na_estimate = self.optimistic_init(self.large_optimistic_init_value)
         print 'Bandits initial values :'
         print self.q_na_estimate
+        
+        # to store the maximum amount of iterations per bandit for plotting purposes
+        self.max_x_range = 0
 
 
     def sample_gaussian(self, mean, variance):
@@ -109,24 +115,71 @@ class MultiArmBandit(object):
         x_list = []
         for i in range(0, len(y_list)):
             x_list.append(i)
-        print 'xlist'
-        print x_list
+        
+        # store the maximum range in x
+        if max(x_list) > self.max_x_range:
+            self.max_x_range = max(x_list)
         
         plt.plot(x_list, y_list, color)
-        plt.axis([-0.15, max(x_list) + 0.15, -10., max(y_list) + 10.])
+        plt.axis([-0.15, self.max_x_range + 0.15, -10., max(y_list) + 10.])
 
+
+    def select_bandit(self, policy):
+        '''
+        select the bandit to play based upon a policy:
+        greedy, e-greedy, etc.
+        '''
+        if policy == 'greedy':
+            return self.pick_best_action(self.q_na_estimate)
+        elif policy == 'e-greedy':
+            # generate random uniformely distributed number between 0-1
+            random_uniform = round(np.random.uniform(0.0, 1.0), 4)
+            # ensure that the generated number if greater than 0
+            assert random_uniform >= 0.0
+            # if random number is less than "e" then select random action, best action otherwise
+            if random_uniform < self.e:
+                # random action (allow some exploration)
+                #print 'e-greedy : exploring'
+                return int(np.random.uniform(0, self.number_of_bandits))
+            else:
+                # best action (greedy)
+                #print 'e-greedy : exploiting'
+                return self.pick_best_action(self.q_na_estimate)
+        elif policy == 'boltzman':
+                # compute probability distribution
+                prob_dist = []
+                
+                # compute sum of all q_a ' * eta
+                denominator = 0.0
+                for q_na in self.q_na_estimate:
+                    denominator += np.exp(self.eta * q_na)
+                
+                for q_na in self.q_na_estimate:
+                    numerator = np.exp(self.eta * q_na)
+                    prob_dist.append(numerator / denominator)
+                
+                print 'boltzman probability distribution'
+                print prob_dist
+                print 'sum : %f, (must be 1)' %(sum(prob_dist))
+                
+                # generate an array of 1 - num of bandits
+                bandit_index_array = [i for i in range(0, self.number_of_bandits)]
+                # draw a weighted random choice
+                return choice(bandit_index_array, size=1, replace=True, p=prob_dist)
+                # e.g. print choice(['a','b','c','d'], size=10, replace=True, p=[0.97, 0.01, 0.01, 0.01])
+        else:
+            print 'ERROR: policy not known, admissible values are: greedy, e-greedy, boltzman'
+            return None
 
     def start(self):
         '''
         solve homework 1 by combining all class functions
         '''
-        
-        # greedy, exploitation over exploration
-        
+
         # initialize the number of times played for each bandit to 0
         number_of_times_played = []
         for i in range(0, self.number_of_bandits):
-            number_of_times_played.append(0)
+            number_of_times_played.append(1)
         
         # for plotting purposes
         bandit_rewards = []
@@ -136,24 +189,31 @@ class MultiArmBandit(object):
             bandit_rewards.append([self.q_na_estimate[bandit_index]])
 
         for epoc in range(1, self.number_of_times_to_play):
-            # get the index of the bandit with the maximum reward
-            best_bandit = self.pick_best_action(self.q_na_estimate)
             
+            # greedy : get the index of the bandit with the maximum reward
+            #selected_bandit = self.select_bandit('greedy')
+            
+            # e-greedy : allow for some exploration, controled by parameter "e"
+            #selected_bandit = self.select_bandit('e-greedy')
+
+            # boltzman : probability of selecting a depends on the 
+            selected_bandit = self.select_bandit('boltzman')
+
             # play bandit and get a reward
-            reward = self.compute_reward(best_bandit)
+            reward = self.compute_reward(selected_bandit)
             
             # update value
-            updated_value = self.update_q_a_estimate(reward, number_of_times_played[best_bandit], best_bandit)
+            updated_value = self.update_q_a_estimate(reward, number_of_times_played[selected_bandit], selected_bandit)
             
             # increase the number of times played of the winner bandit by one
-            number_of_times_played[best_bandit] = number_of_times_played[best_bandit] + 1
+            number_of_times_played[selected_bandit] = number_of_times_played[selected_bandit] + 1
             
             # update bandit estimate based on the obtained reward
-            print '%d. Played bandit %d , gained reward of %f, updating value from %f to %f'% (epoc, best_bandit, reward, self.q_na_estimate[best_bandit], updated_value)
-            self.q_na_estimate[best_bandit] = updated_value
+            print '%d. Played bandit %d , gained reward of %f, updating value from %f to %f'% (epoc, selected_bandit, reward, self.q_na_estimate[selected_bandit], updated_value)
+            self.q_na_estimate[selected_bandit] = updated_value
             
             # save bandit updated_value in memory for plotting purposes
-            bandit_rewards[best_bandit].append(updated_value)
+            bandit_rewards[selected_bandit].append(updated_value)
 
 
         print 'Bandit rewards after %d iterations'% (self.number_of_times_to_play)
@@ -171,7 +231,7 @@ class MultiArmBandit(object):
             self.plot_bandit_rewards(bandit_rewards[i], colors_array[i])
         
         # setup labels and show plot
-        plt.xlabel('epocs')
+        plt.xlabel('steps')
         plt.ylabel('reward')
         plt.show()
 
