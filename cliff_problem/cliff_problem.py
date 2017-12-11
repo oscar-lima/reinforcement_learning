@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import sys,tty,termios # for moving the agent with the keyboard
+
 class CliffProblem (object):
     '''
     Class to solve Reinforcement Learning homework programming assignment 3
@@ -47,6 +49,7 @@ class CliffProblem (object):
                     print 'R',
                 else:
                     print (cell),
+        print '\n------------------------'
 
 
     def robot_is_in_cliff (self, state):
@@ -110,18 +113,59 @@ class CliffProblem (object):
         return [state, reward]
 
 
-    def compute_reward (self, state):
+    def get_char (self):
         '''
-        cliff      = -100
-        every step = -1
-        goal       = 100
+        taken from: https://stackoverflow.com/questions/22397289/finding-the-values-of-the-arrow-keys-in-python-why-are-they-triples
+        input a char from the keyboard
         '''
-        if state == self.goal_state:
-            return 100
-        elif state < 37:
-            return -1
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(3)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+    def read_arrow_from_keyboard (self):
+        '''
+        Use function get_char () to read a key and compare it to match a known arrow
+        '''
+        arrow = None
+        key = self.get_char ()
+
+        if key == '\x1b[A':
+            arrow = 'up'
+        elif key == '\x1b[B':
+            arrow = 'down'
+        elif key == '\x1b[C':
+            arrow = 'right'
+        elif key == '\x1b[D':
+            arrow = 'left'
         else:
-            return -100
+            print 'not an arrow key!'
+
+        assert arrow != None
+
+        return arrow
+
+
+    def move_robot_with_keyword (self):
+        '''
+        Read arrows from keyboard to move the robot around the cliff world manually
+        for testing purposes
+        '''
+        print 'Move the robot around the environment 20 times with the keyboard'
+        # move the agent around the environment with the keyboard
+        for i in range(0, 20):
+            # get action from keyword (only arrows are allowed
+            action = self.read_arrow_from_keyboard ()
+            # execute action
+            self.robot_state, reward = self.execute_action(self.robot_state, action)
+            print 'Because of the previous action, you got a reward of : %d\n'%(reward)
+            # print the world
+            self.print_world_state(self.robot_state)
 
 
     def start_cliff_problem (self):
@@ -130,6 +174,9 @@ class CliffProblem (object):
         '''
         # print the initial world state
         self.print_world_state (self.robot_state)
+        
+        # demo robot keyboard teleoperation
+        self.move_robot_with_keyword ()
 
 
 if __name__ == '__main__':
