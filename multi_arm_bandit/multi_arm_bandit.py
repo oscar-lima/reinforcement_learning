@@ -21,7 +21,7 @@ class MultiArmBandit(object):
         self.bandits_mean_reward = 0.0 # in average the bandits will give you no reward (might loose, might win)
         self.bandits_variance = 1.0 # bandit average reward is allowed to deviate this much w.r.t. self.bandits_mean_reward
         self.reward_variance = 1.0 # bandit reward is allowed to deviate this much w.r.t. the bandit mean (self.bandit_average_rewards[bandit_number])
-        self.large_optimistic_init_value = 100.0 # the optimistic initialization (big) value
+        self.large_optimistic_init_value = -100.0 # the optimistic initialization (big) value
         self.number_of_times_to_play = 1000 # the number of times to play the bandits
         self.e = 0.3 # the tradeoff between explotation and exploration e-greedy parameter. it will allow for this much percentage of exploration (e.g. 30%)
         self.eta = 0.01 # botlzman policy param: control the tradeoff between uniform and greedy policy
@@ -196,7 +196,7 @@ class MultiArmBandit(object):
             # e-greedy : allow for some exploration, controled by parameter "e"
             #selected_bandit = self.select_bandit('e-greedy')
 
-            # boltzman : probability of selecting a depends on the 
+            # boltzman : probability of selecting an action depends on the ?????????
             selected_bandit = self.select_bandit('boltzman')
 
             # play bandit and get a reward

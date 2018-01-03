@@ -11,46 +11,8 @@ class TestStringMethods(unittest.TestCase):
         Function that gets executed only once
         '''
         self.cliff_problem_instance = cliff_problem.CliffProblem ()
-
-
-    def test_compute_reward1 (self):
-        # test -1 rewards
-        expected_reward = -1
-        for state in range (0, 37):
-            reward = self.cliff_problem_instance.compute_reward (state)
-            self.assertEqual(reward, expected_reward)
-        # test -100 rewards
-        expected_reward = -100
-        for state in range (37, 47):
-            reward = self.cliff_problem_instance.compute_reward (state)
-            self.assertEqual(reward, expected_reward)
-        # test 100 rewards
-        expected_reward = 100
-        reward = self.cliff_problem_instance.compute_reward (47)
-        self.assertEqual(reward, expected_reward)
-
-
-    def test_compute_reward2 (self):
-        '''
-        test only critical reward cells
-        '''
-        reward = self.cliff_problem_instance.compute_reward (36)
-        expected_reward = -1
-        self.assertEqual(reward, expected_reward)
-        #--
-        reward = self.cliff_problem_instance.compute_reward (37)
-        expected_reward = -100
-        self.assertEqual(reward, expected_reward)
-        #--
-        reward = self.cliff_problem_instance.compute_reward (46)
-        expected_reward = -100
-        self.assertEqual(reward, expected_reward)
-        #--
-        reward = self.cliff_problem_instance.compute_reward (47)
-        expected_reward = 100
-        self.assertEqual(reward, expected_reward)
     
-    def test_robot_is_in_cliff3 (self):
+    def test_robot_is_in_cliff1 (self):
         '''
         is robot on the cliff?, test the critical points
         '''
@@ -78,7 +40,7 @@ class TestStringMethods(unittest.TestCase):
         output_value = self.cliff_problem_instance.robot_is_in_cliff (0)
         self.assertEqual(expected_value, output_value)
     
-    def test_execute_action_left_4 (self):
+    def test_execute_action_left_2 (self):
         expected_value = 3
         output_value = self.cliff_problem_instance.execute_action (4, 'left')
         self.assertEqual(expected_value, output_value[0])
@@ -124,7 +86,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(expected_value, output_value[0])
         self.assertEqual(-1, output_value[1]) # reward test
     
-    def test_execute_action_right_4 (self):
+    def test_execute_action_right_3 (self):
         expected_value = 11
         output_value = self.cliff_problem_instance.execute_action (11, 'right')
         self.assertEqual(expected_value, output_value[0])
@@ -170,7 +132,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(expected_value, output_value[0])
         self.assertEqual(-100, output_value[1]) # reward test
         
-    def test_execute_action_down_5 (self):
+    def test_execute_action_down_4 (self):
         expected_value = 12
         output_value = self.cliff_problem_instance.execute_action (0, 'down')
         self.assertEqual(expected_value, output_value[0])
@@ -216,7 +178,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(expected_value, output_value[0])
         self.assertEqual(-1, output_value[1]) # reward test
         
-    def test_execute_action_up_6 (self):
+    def test_execute_action_up_5 (self):
         expected_value = 0
         output_value = self.cliff_problem_instance.execute_action (0, 'up')
         self.assertEqual(expected_value, output_value[0])

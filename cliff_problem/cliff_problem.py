@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys,tty,termios # for moving the agent with the keyboard
+from random import randint # to genarate random int numbers
 
 class CliffProblem (object):
     '''
@@ -52,30 +53,40 @@ class CliffProblem (object):
         print '\n------------------------'
 
 
-    def robot_is_in_cliff (self, state):
+    def robot_is_in_cliff (self, state, output=True):
         '''
         return true if robot is in the cliff
         '''
         if state > 36 and state < self.goal_state:
+            if output:
+                print 'Oh boy! you have fallen into the cliff !'
             return True
         else:
             return False
-        
 
-    def execute_action (self, state, action, world_width=12):
+
+    def select_random_action (self, possible_actions):
+        '''
+        select a random action among a given list
+        '''
+        return possible_actions[randint(0, len(possible_actions))]
+
+
+    def execute_action (self, state, action, world_width=12, output=True):
         '''
         Execute an action: up, down, left, right.
         Change the agent state and get a reward
         '''
         # ensure state is different than the cliff
-        assert not self.robot_is_in_cliff(state)
+        assert not self.robot_is_in_cliff(state, output)
 
         # most states provide with this reward so it makes sense to set it now and only modify if needed
         reward = -1
 
         if action == 'up':
             if state < world_width:
-                print 'agent cant go up because it is at the higher level already, doing nothing'
+                if output:
+                    print 'agent cant go up because it is at the higher level already, doing nothing'
             else:
                 state = state - world_width
         elif action == 'down':
@@ -84,23 +95,27 @@ class CliffProblem (object):
         elif action == 'left':
             # handle particular cases
             if state % world_width == 0:
-                print 'robot is at a extreme left cell, executing left will lead to the same position'
+                if output:
+                    print 'robot is at a extreme left cell, executing left will lead to the same position'
             else:
                 state = state - 1
         elif action == 'right':
             # handle particular cases
             if state == 11 or state == 23 or state == 35 or state == 47:
-                print 'robot is at extreme right cell, executing right will lead to the same position'
+                if output:
+                    print 'robot is at extreme right cell, executing right will lead to the same position'
             else:
                 state = state + 1
         else:
-            print 'Action is not known, admissible values are: up, down, left, right'
+            if output:
+                print 'Action is not known, admissible values are: up, down, left, right'
             return None
         
-        # if robot is in cliff then send it to intial state (36)
-        if self.robot_is_in_cliff (state):
-            reward = -100
-            state = self.initial_state # 36
+        if output:
+            # if robot is in cliff then send it to initial state (36)
+            if self.robot_is_in_cliff (state, output):
+                reward = -100
+                state = self.initial_state # 36
         
         # ensure state to be between range 0 - goal state
         assert state < self.goal_state + 1
@@ -168,17 +183,49 @@ class CliffProblem (object):
             self.print_world_state(self.robot_state)
 
 
-    def start_cliff_problem (self):
+    def print_corner_state (self, qup, qdown, qleft, qright, robot=False):
         '''
-        Solve the cliff problem
+        print upper left corner state
+        input boolean robot: whether robot is in this state or not
+        '''
+        print '--------------------------------'
+        print '|   ' + str(qup) + '   |'
+        if robot:
+            print '|' + str(qleft) + ' R ' + str(qright) + '|'
+        else:
+            print '|' + str(qleft) + '   ' + str(qright) + '|'
+        print '|   ' + str(qdown) + '   |'
+        print '--------------------------------'
+
+
+    def print_state_with_q_values (self):
+        '''
+        prints q matrix in a nice way:
+        -----------------
+        |       5.6       |
+        |4.5          7.8 | = S
+        |       4.3       |
+        -----------------
+        Being 5.6 the reward being on state S and choosing up action
+        '''
+        pass
+        
+
+
+    def teleop_demo (self):
+        '''
+        Test the functions in this file with an interactive demo
         '''
         # print the initial world state
         self.print_world_state (self.robot_state)
         
         # demo robot keyboard teleoperation
         self.move_robot_with_keyword ()
+        
+        # print q
+        #self.print_corner_state (5.6, 4.3, 4.5, 7.8, robot=False)
 
 
 if __name__ == '__main__':
     cliff_problem_instance = CliffProblem ()
-    cliff_problem_instance.start_cliff_problem()
+    cliff_problem_instance.teleop_demo ()
