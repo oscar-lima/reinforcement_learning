@@ -3,6 +3,7 @@
 import cliff_problem
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 class QLearning (object):
     '''
@@ -29,6 +30,8 @@ class QLearning (object):
         self.learning_rate = 0.5
         # epsilon greedy parameter, exploration vs exploitation
         self.e = 0.0001
+        # a list with all total rewards obtained on each episode
+        self.total_reward_list = []
 
 
     def format_q_number (self, number):
@@ -40,9 +43,9 @@ class QLearning (object):
             number = 99.0
         elif number < -100:
             number = -99.0
-        
+
         return str(int(number)).ljust(max_spaces)
-        
+
 
     def print_q_line (self, start, end):
         '''
@@ -53,7 +56,7 @@ class QLearning (object):
         line2 = ''
         line3 = ''
         space = '  '
-        
+
         max_spaces = 4 # the amount of spaces that the largest number has
         for i in range(start, end):
             line1 = line1 + '   ' + self.format_q_number(self.q[i][0]) + space + '|'
@@ -63,7 +66,7 @@ class QLearning (object):
                 robot = ' '
             line2 = line2 + self.format_q_number(self.q[i][3]) + robot + self.format_q_number(self.q[i][2]) + '|'
             line3 = line3 + '   ' + self.format_q_number(self.q[i][1]) + space + '|'
-            
+
         print line1
         print line2
         print line3
@@ -85,13 +88,13 @@ class QLearning (object):
         convert action word into number (index)
         '''
         return self.possible_actions.index(action)
-        
+
 
     def update_q (self, robot_state, action, reward):
         # rule to update q
         # Q(s,a) <- Q(s,a) + alpha * [R(state, action) + Gamma * Max[Q(next state, all actions)]
         self.q [robot_state][self.action_to_index (action)] += self.learning_rate * (reward + self.gamma * self.compute_max_future_q_value (self.robot_state, self.q))
-        
+
 
     def compute_max_future_q_value (self, future_robot_state, q_matrix):
         '''
@@ -134,6 +137,8 @@ class QLearning (object):
         print '********************************'
         # put the robot in the start position
         self.robot_state = self.initial_state
+
+        total_reward = 0.0
         while self.robot_state != self.goal_state:
             # follow policy with epsilon greeedy = 0.15
             # generate a random number between 0 and 1 rounded up to 4 decimals
@@ -150,6 +155,7 @@ class QLearning (object):
             current_robot_state = self.robot_state
             # move the robot to the best q value (or random if they are all same)
             self.robot_state, reward = self.cliff_world.execute_action(self.robot_state, action)
+            total_reward += reward
             print 'robot state:',
             print self.robot_state
             # get maximum q (of next step)
@@ -161,6 +167,7 @@ class QLearning (object):
             print '********************************'
         print 'pretty q print:'
         self.print_q ()
+        return total_reward
 
 
     def q_learning_algorithm (self):
@@ -168,7 +175,17 @@ class QLearning (object):
         run 500 episodes
         '''
         for i in range (0, 500):
-            self.run_one_episode ()
+            total_reward = self.run_one_episode ()
+            self.total_reward_list.append(total_reward)
+        # plot all episode total rewards
+        x_list = []
+        for i, total_reward in enumerate(self.total_reward_list):
+            x_list.append(i)
+        plt.plot(x_list, self.total_reward_list, 'b')
+        plt.axis([-10., 100., -1700., 200.])
+        plt.xlabel('episode')
+        plt.ylabel('total reward')
+        plt.show()
 
 
 if __name__ == '__main__':
